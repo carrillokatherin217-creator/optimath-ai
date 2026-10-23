@@ -64,6 +64,9 @@ st.sidebar.write("Karla Rebeca Ortiz Pineda")
 st.sidebar.markdown("**Integrante 2**")
 st.sidebar.write("Katherin Lourdes Carrillo Garcia")
 
+st.sidebar.markdown("**Integrante 3**")
+st.sidebar.write("Melany Alejadra Sanchez Díaz")
+
 st.sidebar.markdown("**Carrera**")
 st.sidebar.write("Ingeniería en Sistemas")
 
