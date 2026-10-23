@@ -52,21 +52,26 @@ with st.sidebar:
         ],
     )
 
-    st.divider()
-    st.subheader("Información académica")
+   
+# Información académica fija
+st.sidebar.markdown("---")
+st.sidebar.subheader("Información académica")
 
-    integrante1 = st.text_input(
-        "Integrante 1",
-        placeholder="Nombre completo",
-    )
-    integrante2 = st.text_input(
-        "Integrante 2",
-        placeholder="Nombre completo",
-    )
-    seccion = st.text_input(
-        "Sección",
-        placeholder="Ej. A",
-    )
+st.sidebar.markdown("**Integrante 1**")
+st.sidebar.write("Karla Rebeca Ortiz Pineda")
+
+st.sidebar.markdown("**Integrante 2**")
+st.sidebar.write("Katherin Lourdes Carrillo Garcia")
+
+st.sidebar.markdown("**Carrera**")
+st.sidebar.write("Ingeniería en Sistemas")
+
+st.sidebar.markdown("**Grado**")
+st.sidebar.write("Sexto ciclo")
+
+st.sidebar.markdown("**Sección**")
+st.sidebar.write("A")
+
 
     st.divider()
     st.caption("LOURE IA · Aprende a tu ritmo 💙")
