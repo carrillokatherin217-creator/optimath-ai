@@ -72,7 +72,6 @@ st.sidebar.write("Sexto ciclo")
 st.sidebar.markdown("**Sección**")
 st.sidebar.write("A")
 
-
     st.divider()
     st.caption("LOURE IA · Aprende a tu ritmo 💙")
 
