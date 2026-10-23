@@ -73,9 +73,38 @@ with st.sidebar:
 
 
 # =========================================================
-# CHAT INTELIGENTE
+# INSTRUCCIONES DEL CHAT
 # =========================================================
 
+instrucciones = """
+Eres LOURE IA, un asistente educativo en español especializado en
+Investigación de Operaciones.
+
+Ayudas con:
+- Modelación matemática.
+- Programación lineal.
+- Método gráfico.
+- Método simplex.
+- Problemas de transporte y asignación.
+- Inventarios y cantidad económica de pedido.
+- Ejercicios y práctica académica.
+
+Tu comportamiento:
+1. Explica de forma clara, amable y paso a paso.
+2. Adapta tus explicaciones a estudiantes principiantes.
+3. Identifica variables, función objetivo y restricciones cuando aplique.
+4. No inventes datos que falten en el enunciado.
+5. Explica las fórmulas y cómo comprobar los resultados.
+6. Distingue entre resultados calculados y ejemplos ilustrativos.
+7. Responde también preguntas generales, pero prioriza el aprendizaje.
+8. No afirmes que ejecutaste cálculos en la aplicación si no lo hiciste.
+9. Mantén un tono respetuoso, cercano y educativo.
+"""
+
+
+# =========================================================
+# CHAT INTELIGENTE
+# =========================================================
 
 def chat_loure_ia():
     st.header("💬 Conversa con LOURE IA")
@@ -153,14 +182,12 @@ def chat_loure_ia():
                 cliente = genai.Client(api_key=clave)
 
                 historial = []
-
                 for mensaje in st.session_state.loure_messages[-20:]:
                     rol = (
                         "model"
                         if mensaje["role"] == "assistant"
                         else "user"
                     )
-
                     historial.append(
                         types.Content(
                             role=rol,
@@ -185,7 +212,6 @@ def chat_loure_ia():
                     resultado.text
                     or "No pude generar una respuesta. Inténtalo de nuevo."
                 )
-
                 st.markdown(respuesta)
 
                 st.session_state.loure_messages.append(
@@ -199,76 +225,6 @@ def chat_loure_ia():
             f"Detalle: {e}"
         )
 
-
-
-    instrucciones = """
-Eres LOURE IA, un asistente educativo en español especializado en
-Investigación de Operaciones.
-
-Ayudas con:
-- Modelación matemática.
-- Programación lineal.
-- Método gráfico.
-- Método simplex.
-- Problemas de transporte y asignación.
-- Inventarios y cantidad económica de pedido.
-- Ejercicios y práctica académica.
-
-Tu comportamiento:
-1. Explica de forma clara, amable y paso a paso.
-2. Adapta tus explicaciones a estudiantes principiantes.
-3. Identifica variables, función objetivo y restricciones cuando aplique.
-4. No inventes datos que falten en el enunciado.
-5. Explica las fórmulas y cómo comprobar los resultados.
-6. Distingue entre resultados calculados y ejemplos ilustrativos.
-7. Responde también preguntas generales, pero prioriza el aprendizaje.
-8. No afirmes que ejecutaste cálculos en la aplicación si no lo hiciste.
-9. Mantén un tono respetuoso, cercano y educativo.
-"""
-
-    mensajes_api = [
-        {"role": "system", "content": instrucciones}
-    ]
-
-    mensajes_api.extend(
-        st.session_state.loure_messages[-20:]
-    )
-
-   
-try:
-    with st.chat_message("assistant"):
-        with st.spinner("LOURE IA está pensando... 💭"):
-            cliente = genai.Client(api_key=clave)
-
-            historial = []
-            for mensaje in st.session_state.loure_messages[-20:]:
-                rol = "model" if mensaje["role"] == "assistant" else "user"
-                historial.append(
-                    types.Content(
-                        role=rol,
-                        parts=[types.Part.from_text(text=mensaje["content"])]
-                    )
-                )
-
-            resultado = cliente.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=historial,
-                config=types.GenerateContentConfig(
-                    system_instruction=instrucciones,
-                    temperature=0.4
-                )
-            )
-
-            respuesta = resultado.text or "No pude generar una respuesta. Inténtalo de nuevo."
-
-            st.markdown(respuesta)
-
-            st.session_state.loure_messages.append(
-                {"role": "assistant", "content": respuesta}
-            )
-
-except Exception as e:
-    st.error(f"Error al conectar con Gemini: {e}")
 
 # =========================================================
 # SOLUCIONADOR DE PROGRAMACIÓN LINEAL
