@@ -1,59 +1,244 @@
 
+import os
+import random
+
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linprog, linear_sum_assignment
-import random
+from openai import OpenAI
 
-st.set_page_config(page_title="OptiMath AI", page_icon="📊", layout="wide")
 
-st.title("📊 OptiMath AI")
-st.subheader("Asistente Virtual de Investigación de Operaciones")
-st.write("Aprende a modelar y resolver problemas paso a paso.")
-st.caption("Universidad Mariano Gálvez de Guatemala · Investigación de Operaciones")
+# =========================================================
+# CONFIGURACIÓN GENERAL
+# =========================================================
 
-with st.sidebar:
-    st.header("Información académica")
-    st.text_input("Integrante 1", placeholder="Nombre completo")
-    st.text_input("Integrante 2", placeholder="Nombre completo")
-    st.text_input("Sección", placeholder="Ej. A")
-
-modulo = st.selectbox(
-    "Selecciona un módulo",
-    [
-        "Inicio",
-        "Modelación matemática",
-        "Programación lineal",
-        "Método gráfico",
-        "Método simplex",
-        "Transporte y asignación",
-        "Inventarios",
-        "Ejercicios y práctica",
-    ],
+st.set_page_config(
+    page_title="LOURE IA",
+    page_icon="💙",
+    layout="wide",
 )
 
+st.title("💙 LOURE IA")
+st.subheader("Tu asistente virtual de Investigación de Operaciones")
+st.write(
+    "Aprende, modela y resuelve problemas paso a paso "
+    "con ayuda de la inteligencia artificial."
+)
+st.caption("Proyecto académico · Investigación de Operaciones")
+
+
+# =========================================================
+# MENÚ LATERAL
+# =========================================================
+
+with st.sidebar:
+    st.header("💙 LOURE IA")
+    st.write("¿En qué podemos trabajar hoy?")
+
+    modulo = st.selectbox(
+        "Selecciona un módulo",
+        [
+            "Chat con LOURE IA",
+            "Inicio",
+            "Modelación matemática",
+            "Programación lineal",
+            "Método gráfico",
+            "Método simplex",
+            "Transporte y asignación",
+            "Inventarios",
+            "Ejercicios y práctica",
+        ],
+    )
+
+    st.divider()
+    st.subheader("Información académica")
+
+    integrante1 = st.text_input(
+        "Integrante 1",
+        placeholder="Nombre completo",
+    )
+    integrante2 = st.text_input(
+        "Integrante 2",
+        placeholder="Nombre completo",
+    )
+    seccion = st.text_input(
+        "Sección",
+        placeholder="Ej. A",
+    )
+
+    st.divider()
+    st.caption("LOURE IA · Aprende a tu ritmo 💙")
+
+
+# =========================================================
+# CHAT INTELIGENTE
+# =========================================================
+
+def chat_loure_ia():
+    st.header("💬 Conversa con LOURE IA")
+
+    st.write(
+        "Pregúntame sobre programación lineal, modelación matemática, "
+        "método gráfico, simplex, transporte, asignación o inventarios."
+    )
+
+    if "loure_messages" not in st.session_state:
+        st.session_state.loure_messages = [
+            {
+                "role": "assistant",
+                "content": (
+                    "¡Holaaa! Soy LOURE IA. 💙\n\n"
+                    "Estoy aquí para ayudarte a aprender Investigación "
+                    "de Operaciones. Puedes contarme tu ejercicio, pedirme "
+                    "una explicación o decirme en qué paso te atoraste."
+                ),
+            }
+        ]
+
+    if st.button("Limpiar conversación"):
+        st.session_state.loure_messages = [
+            {
+                "role": "assistant",
+                "content": (
+                    "¡Empecemos de nuevo! 💙 ¿Qué necesitas aprender hoy?"
+                ),
+            }
+        ]
+        st.rerun()
+
+    for mensaje in st.session_state.loure_messages:
+        with st.chat_message(mensaje["role"]):
+            st.markdown(mensaje["content"])
+
+    pregunta = st.chat_input("Escribe tu pregunta aquí...")
+
+    if not pregunta:
+        return
+
+    st.session_state.loure_messages.append(
+        {"role": "user", "content": pregunta}
+    )
+
+    with st.chat_message("user"):
+        st.markdown(pregunta)
+
+    clave = os.getenv("OPENAI_API_KEY", "")
+
+    try:
+        clave = clave or st.secrets.get("OPENAI_API_KEY", "")
+    except Exception:
+        pass
+
+    if not clave:
+        respuesta = (
+            "El chat todavía no está conectado a la API. 💙\n\n"
+            "Configura `OPENAI_API_KEY` en los Secrets de Streamlit Cloud. "
+            "No publiques tu clave en GitHub ni la escribas directamente "
+            "en este archivo."
+        )
+        with st.chat_message("assistant"):
+            st.warning(respuesta)
+
+        st.session_state.loure_messages.append(
+            {"role": "assistant", "content": respuesta}
+        )
+        return
+
+    instrucciones = """
+Eres LOURE IA, un asistente educativo en español especializado en
+Investigación de Operaciones.
+
+Ayudas con:
+- Modelación matemática.
+- Programación lineal.
+- Método gráfico.
+- Método simplex.
+- Problemas de transporte y asignación.
+- Inventarios y cantidad económica de pedido.
+- Ejercicios y práctica académica.
+
+Tu comportamiento:
+1. Explica de forma clara, amable y paso a paso.
+2. Adapta tus explicaciones a estudiantes principiantes.
+3. Identifica variables, función objetivo y restricciones cuando aplique.
+4. No inventes datos que falten en el enunciado.
+5. Explica las fórmulas y cómo comprobar los resultados.
+6. Distingue entre resultados calculados y ejemplos ilustrativos.
+7. Responde también preguntas generales, pero prioriza el aprendizaje.
+8. No afirmes que ejecutaste cálculos en la aplicación si no lo hiciste.
+9. Mantén un tono respetuoso, cercano y educativo.
+"""
+
+    mensajes_api = [
+        {"role": "system", "content": instrucciones}
+    ]
+
+    mensajes_api.extend(
+        st.session_state.loure_messages[-20:]
+    )
+
+    try:
+        with st.chat_message("assistant"):
+            with st.spinner("LOURE IA está pensando... 💭"):
+                cliente = OpenAI(api_key=clave)
+
+                resultado = cliente.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=mensajes_api,
+                    temperature=0.4,
+                )
+
+                respuesta = (
+                    resultado.choices[0].message.content
+                    or "No pude generar una respuesta. Inténtalo de nuevo."
+                )
+
+                st.markdown(respuesta)
+
+        st.session_state.loure_messages.append(
+            {"role": "assistant", "content": respuesta}
+        )
+
+    except Exception as error:
+        st.error(
+            "No pude conectar con la inteligencia artificial. "
+            "Verifica los Secrets de Streamlit Cloud, la conexión "
+            "y que tu cuenta de API tenga acceso disponible."
+        )
+        st.caption(f"Detalle técnico: {error}")
+
+
+# =========================================================
+# SOLUCIONADOR DE PROGRAMACIÓN LINEAL
+# =========================================================
 
 def resolver_modelo(objetivo, restricciones, sentido):
-    """Resuelve un modelo lineal con dos variables."""
-    A_ub, b_ub, A_eq, b_eq = [], [], [], []
+    A_ub = []
+    b_ub = []
+    A_eq = []
+    b_eq = []
 
     for a, b, signo, limite in restricciones:
         if signo == "≤":
             A_ub.append([a, b])
             b_ub.append(limite)
+
         elif signo == "≥":
             A_ub.append([-a, -b])
             b_ub.append(-limite)
+
         else:
             A_eq.append([a, b])
             b_eq.append(limite)
 
-    c = np.array(objetivo, dtype=float)
-    if sentido == "Maximizar":
-        c = -c
+    coeficientes = np.array(objetivo, dtype=float)
 
-    return linprog(
-        c,
+    if sentido == "Maximizar":
+        coeficientes = -coeficientes
+
+    resultado = linprog(
+        coeficientes,
         A_ub=np.array(A_ub) if A_ub else None,
         b_ub=np.array(b_ub) if b_ub else None,
         A_eq=np.array(A_eq) if A_eq else None,
@@ -62,27 +247,41 @@ def resolver_modelo(objetivo, restricciones, sentido):
         method="highs",
     )
 
+    return resultado
+
 
 def modulo_lineal(grafica=False, simplex=False):
     st.header("📈 Programación lineal")
+
+    st.write(
+        "Define la función objetivo y las restricciones de tu modelo."
+    )
 
     sentido = st.radio(
         "Objetivo",
         ["Maximizar", "Minimizar"],
         horizontal=True,
-        key=f"sentido_{modulo}",
     )
 
-    c1, c2 = st.columns(2)
-    with c1:
-        cx = st.number_input("Coeficiente de x en Z", value=40.0)
-    with c2:
-        cy = st.number_input("Coeficiente de y en Z", value=30.0)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        cx = st.number_input(
+            "Coeficiente de x en Z",
+            value=40.0,
+            key="coef_x",
+        )
+
+    with col2:
+        cy = st.number_input(
+            "Coeficiente de y en Z",
+            value=30.0,
+            key="coef_y",
+        )
 
     cantidad = st.selectbox(
-        "Cantidad de restricciones",
+        "Número de restricciones",
         [2, 3, 4, 5],
-        key=f"cantidad_{modulo}",
     )
 
     predeterminadas = [
@@ -97,52 +296,61 @@ def modulo_lineal(grafica=False, simplex=False):
 
     for i in range(cantidad):
         st.markdown(f"**Restricción {i + 1}**")
+
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
             a = st.number_input(
-                "Coef. x",
+                "Coeficiente x",
                 value=predeterminadas[i][0],
-                key=f"a_{modulo}_{i}",
+                key=f"ax_{i}",
             )
+
         with c2:
             b = st.number_input(
-                "Coef. y",
+                "Coeficiente y",
                 value=predeterminadas[i][1],
-                key=f"b_{modulo}_{i}",
+                key=f"by_{i}",
             )
+
         with c3:
             signo = st.selectbox(
                 "Signo",
                 ["≤", "≥", "="],
-                key=f"signo_{modulo}_{i}",
+                key=f"signo_{i}",
             )
+
         with c4:
             limite = st.number_input(
                 "Límite",
                 value=predeterminadas[i][3],
-                key=f"limite_{modulo}_{i}",
+                key=f"limite_{i}",
             )
 
         restricciones.append((a, b, signo, limite))
 
-    if st.button("Resolver problema", type="primary", key=f"resolver_{modulo}"):
+    if st.button("Resolver problema", type="primary"):
         if any(a == 0 and b == 0 for a, b, _, _ in restricciones):
-            st.error("Cada restricción necesita al menos un coeficiente distinto de cero.")
+            st.error(
+                "Cada restricción necesita al menos un coeficiente "
+                "distinto de cero."
+            )
             return
 
         try:
             resultado = resolver_modelo(
-                [cx, cy], restricciones, sentido
+                [cx, cy],
+                restricciones,
+                sentido,
             )
 
             if not resultado.success:
                 if resultado.status == 2:
                     st.error("El modelo no tiene solución factible.")
                 elif resultado.status == 3:
-                    st.error("El problema no tiene un óptimo finito: es no acotado.")
+                    st.error("El problema no tiene un óptimo finito.")
                 else:
-                    st.error(f"No se pudo resolver: {resultado.message}")
+                    st.error(resultado.message)
                 return
 
             x, y = resultado.x
@@ -158,13 +366,21 @@ def modulo_lineal(grafica=False, simplex=False):
             st.latex(rf"Z = {cx:g}x + {cy:g}y")
 
             st.subheader("3. Restricciones")
-            for i, (a, b, signo, limite) in enumerate(restricciones, 1):
-                st.latex(rf"{a:g}x + {b:g}y \ {signo} \ {limite:g}")
+
+            for i, (a, b, signo, limite) in enumerate(
+                restricciones, 1
+            ):
+                st.latex(
+                    rf"{a:g}x + {b:g}y \ {signo} \ {limite:g}"
+                )
 
             st.latex(r"x \geq 0,\quad y \geq 0")
 
-            st.subheader("4. Sustitución y comprobación")
-            for i, (a, b, signo, limite) in enumerate(restricciones, 1):
+            st.subheader("4. Comprobación")
+
+            for i, (a, b, signo, limite) in enumerate(
+                restricciones, 1
+            ):
                 valor = a * x + b * y
 
                 if signo == "≤":
@@ -175,39 +391,36 @@ def modulo_lineal(grafica=False, simplex=False):
                     cumple = abs(valor - limite) <= 1e-7
 
                 estado = "Cumple" if cumple else "No cumple"
+
                 st.write(
                     f"R{i}: {a:g}({x:.4f}) + {b:g}({y:.4f}) "
-                    f"= {valor:.4f} {signo} {limite:g}. {estado}"
+                    f"= {valor:.4f}; límite {signo} {limite:g}. "
+                    f"{estado}"
                 )
 
-            st.subheader("5. Evaluación de la función objetivo")
-            st.latex(
-                rf"Z = {cx:g}({x:.4f}) + {cy:g}({y:.4f}) = {z:.4f}"
-            )
+            st.subheader("5. Resultado")
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("Valor óptimo de x", f"{x:.4f}")
-            c2.metric("Valor óptimo de y", f"{y:.4f}")
-            c3.metric("Valor óptimo de Z", f"{z:.4f}")
+            c1.metric("Valor de x", f"{x:.4f}")
+            c2.metric("Valor de y", f"{y:.4f}")
+            c3.metric("Valor de Z", f"{z:.4f}")
 
             st.info(
-                f"Interpretación: para {sentido.lower()}, "
-                f"la solución es x = {x:.4f}, y = {y:.4f}, "
-                f"con un valor de Z = {z:.4f}."
+                f"Para {sentido.lower()}, la solución es "
+                f"x = {x:.4f}, y = {y:.4f}, Z = {z:.4f}."
             )
 
             if simplex:
-                st.subheader("Información del solucionador simplex")
+                st.subheader("Información del solucionador")
                 st.write(
-                    "Se utilizó SciPy con el solucionador HiGHS. "
-                    "El estado y las iteraciones son los reportados por "
-                    "la librería; no son una tabla manual de pivotes."
+                    "Se utiliza SciPy con el método HiGHS. "
+                    "Esto no muestra las tablas manuales de pivotes."
                 )
                 st.write(resultado.message)
                 st.write(f"Iteraciones reportadas: {resultado.nit}")
 
             if grafica:
-                st.subheader("6. Gráfica de las restricciones")
+                st.subheader("6. Gráfica de restricciones")
 
                 max_x = max(
                     10.0,
@@ -218,6 +431,7 @@ def modulo_lineal(grafica=False, simplex=False):
                         if a > 0 and limite > 0
                     ],
                 )
+
                 max_y = max(
                     10.0,
                     y * 1.3 + 1,
@@ -232,21 +446,27 @@ def modulo_lineal(grafica=False, simplex=False):
                 max_y = min(max_y * 1.1, 100000)
 
                 xs = np.linspace(0, max_x, 400)
-                gx = np.linspace(0, max_x, 250)
-                gy = np.linspace(0, max_y, 250)
+                gx = np.linspace(0, max_x, 200)
+                gy = np.linspace(0, max_y, 200)
                 X, Y = np.meshgrid(gx, gy)
-                factible = np.ones(X.shape, dtype=bool)
 
+                factible = np.ones(X.shape, dtype=bool)
                 fig, ax = plt.subplots()
 
-                for i, (a, b, signo, limite) in enumerate(restricciones, 1):
+                for i, (a, b, signo, limite) in enumerate(
+                    restricciones, 1
+                ):
                     if b != 0:
                         ys = (limite - a * xs) / b
                         ax.plot(xs, ys, label=f"Restricción {i}")
                     elif a != 0:
-                        ax.axvline(limite / a, label=f"Restricción {i}")
+                        ax.axvline(
+                            limite / a,
+                            label=f"Restricción {i}",
+                        )
 
                     lado = a * X + b * Y
+
                     if signo == "≤":
                         factible &= lado <= limite + 1e-8
                     elif signo == "≥":
@@ -261,7 +481,15 @@ def modulo_lineal(grafica=False, simplex=False):
                     levels=[0.5, 1.5],
                     alpha=0.2,
                 )
-                ax.scatter([x], [y], marker="*", s=180, label="Óptimo")
+
+                ax.scatter(
+                    [x],
+                    [y],
+                    marker="*",
+                    s=180,
+                    label="Óptimo",
+                )
+
                 ax.set_xlim(0, max_x)
                 ax.set_ylim(0, max_y)
                 ax.set_xlabel("x")
@@ -269,192 +497,281 @@ def modulo_lineal(grafica=False, simplex=False):
                 ax.set_title("Restricciones y solución óptima")
                 ax.grid(True)
                 ax.legend()
+
                 st.pyplot(fig)
                 plt.close(fig)
 
         except Exception as error:
-            st.error(f"Error al resolver el problema: {error}")
+            st.error(f"No se pudo resolver: {error}")
 
+
+# =========================================================
+# MODELACIÓN MATEMÁTICA
+# =========================================================
 
 def modelacion():
     st.header("🧩 Modelación matemática")
-    st.write("Organiza las variables, la función objetivo y las restricciones.")
 
-    st.text_area(
-        "Descripción del problema",
-        placeholder="Describe la situación del ejercicio...",
+    st.write(
+        "Organiza el enunciado, las variables de decisión, "
+        "la función objetivo y las restricciones."
     )
 
-    c1, c2 = st.columns(2)
-    with c1:
-        nombre_x = st.text_input("Variable x representa", "Producto A")
-        unidad_x = st.text_input("Unidad de x", "unidades")
-    with c2:
-        nombre_y = st.text_input("Variable y representa", "Producto B")
-        unidad_y = st.text_input("Unidad de y", "unidades")
+    enunciado = st.text_area(
+        "Descripción del problema",
+        placeholder="Escribe aquí el enunciado de tu ejercicio...",
+    )
 
-    sentido = st.radio("Objetivo", ["Maximizar", "Minimizar"], horizontal=True)
-    a = st.number_input("Coeficiente de x", value=40.0, key="model_a")
-    b = st.number_input("Coeficiente de y", value=30.0, key="model_b")
+    col1, col2 = st.columns(2)
 
-    st.subheader("Restricciones")
-    a1 = st.number_input("R1: coeficiente de x", value=2.0)
-    b1 = st.number_input("R1: coeficiente de y", value=1.0)
-    s1 = st.selectbox("R1: signo", ["≤", "≥", "="])
-    d1 = st.number_input("R1: límite", value=100.0)
-
-    a2 = st.number_input("R2: coeficiente de x", value=1.0)
-    b2 = st.number_input("R2: coeficiente de y", value=2.0)
-    s2 = st.selectbox("R2: signo", ["≤", "≥", "="])
-    d2 = st.number_input("R2: límite", value=80.0)
-
-    if st.button("Construir modelo matemático"):
-        st.write(f"x = {nombre_x} ({unidad_x})")
-        st.write(f"y = {nombre_y} ({unidad_y})")
-        st.latex(
-            rf"\{'max' if sentido == 'Maximizar' else 'min'}\ Z = {a:g}x + {b:g}y"
+    with col1:
+        nombre_x = st.text_input(
+            "¿Qué representa x?",
+            "Producto A",
         )
-        st.latex(rf"{a1:g}x + {b1:g}y \ {s1} \ {d1:g}")
-        st.latex(rf"{a2:g}x + {b2:g}y \ {s2} \ {d2:g}")
-        st.latex(r"x \geq 0,\quad y \geq 0")
-        st.info("Comprueba que las variables y las restricciones correspondan al enunciado.")
+        unidad_x = st.text_input(
+            "Unidad de x",
+            "unidades",
+        )
 
+    with col2:
+        nombre_y = st.text_input(
+            "¿Qué representa y?",
+            "Producto B",
+        )
+        unidad_y = st.text_input(
+            "Unidad de y",
+            "unidades",
+        )
+
+    sentido = st.radio(
+        "Objetivo del problema",
+        ["Maximizar", "Minimizar"],
+        horizontal=True,
+    )
+
+    a = st.number_input("Coeficiente de x en Z", value=40.0)
+    b = st.number_input("Coeficiente de y en Z", value=30.0)
+
+    st.subheader("Modelo matemático")
+
+    st.write(
+        f"x = cantidad de {nombre_x}, medida en {unidad_x}."
+    )
+    st.write(
+        f"y = cantidad de {nombre_y}, medida en {unidad_y}."
+    )
+
+    if sentido == "Maximizar":
+        st.latex(rf"\text{{Maximizar }} Z = {a:g}x + {b:g}y")
+    else:
+        st.latex(rf"\text{{Minimizar }} Z = {a:g}x + {b:g}y")
+
+    st.latex(r"x \geq 0,\quad y \geq 0")
+
+    if enunciado:
+        st.info(
+            "Recuerda identificar los recursos limitados del enunciado "
+            "para construir las restricciones."
+        )
+
+
+# =========================================================
+# TRANSPORTE Y ASIGNACIÓN
+# =========================================================
 
 def transporte_y_asignacion():
     st.header("🚚 Transporte y asignación")
-    tipo = st.radio("Tipo de problema", ["Transporte", "Asignación"], horizontal=True)
 
-    if tipo == "Transporte":
-        n = st.selectbox("Tamaño de la matriz", [2, 3], key="trans_n")
+    tipo = st.radio(
+        "Selecciona el problema",
+        ["Asignación", "Transporte"],
+        horizontal=True,
+    )
+
+    if tipo == "Asignación":
+        n = st.selectbox(
+            "Número de personas y tareas",
+            [2, 3, 4, 5],
+        )
+
         costos = []
 
-        for i in range(n):
-            columnas = st.columns(n)
-            fila = []
-            for j in range(n):
-                with columnas[j]:
-                    fila.append(
-                        st.number_input(
-                            f"Costo O{i+1}-D{j+1}",
-                            min_value=0.0,
-                            value=float(i + j + 2),
-                            key=f"costo_trans_{i}_{j}",
-                        )
-                    )
-            costos.append(fila)
-
-        st.subheader("Oferta y demanda")
-        c1, c2 = st.columns(2)
-        ofertas, demandas = [], []
-
-        with c1:
-            for i in range(n):
-                ofertas.append(
-                    st.number_input(
-                        f"Oferta origen {i+1}",
-                        min_value=0.0,
-                        value=10.0,
-                        key=f"oferta_{i}",
-                    )
-                )
-
-        with c2:
-            for j in range(n):
-                demandas.append(
-                    st.number_input(
-                        f"Demanda destino {j+1}",
-                        min_value=0.0,
-                        value=10.0,
-                        key=f"demanda_{j}",
-                    )
-                )
-
-        if st.button("Resolver transporte"):
-            if abs(sum(ofertas) - sum(demandas)) > 1e-7:
-                st.error(
-                    "El problema está desbalanceado. "
-                    "La oferta total debe igualar la demanda total."
-                )
-            else:
-                matriz = np.array(costos)
-                c = matriz.flatten()
-                A_eq, b_eq = [], []
-
-                for i in range(n):
-                    fila = np.zeros((n, n))
-                    fila[i, :] = 1
-                    A_eq.append(fila.flatten())
-                    b_eq.append(ofertas[i])
-
-                for j in range(n):
-                    fila = np.zeros((n, n))
-                    fila[:, j] = 1
-                    A_eq.append(fila.flatten())
-                    b_eq.append(demandas[j])
-
-                res = linprog(
-                    c,
-                    A_eq=np.array(A_eq),
-                    b_eq=np.array(b_eq),
-                    bounds=(0, None),
-                    method="highs",
-                )
-
-                if res.success:
-                    asignacion = res.x.reshape(n, n)
-                    st.success(f"Costo mínimo total: {res.fun:.2f}")
-                    st.write("Plan óptimo de transporte:")
-                    st.dataframe(asignacion)
-                    st.latex(r"\min C=\sum_i\sum_j c_{ij}x_{ij}")
-                    st.write(
-                        "Cada celda indica cuántas unidades se envían "
-                        "desde un origen hasta un destino."
-                    )
-                else:
-                    st.error(f"No se pudo resolver: {res.message}")
-
-    else:
-        n = st.selectbox("Cantidad de personas y tareas", [2, 3], key="asig_n")
-        costos = []
+        st.write("Ingresa el costo de asignar cada persona a cada tarea.")
 
         for i in range(n):
-            columnas = st.columns(n)
+            cols = st.columns(n)
             fila = []
+
             for j in range(n):
-                with columnas[j]:
-                    fila.append(
-                        st.number_input(
-                            f"Costo persona {i+1}, tarea {j+1}",
-                            min_value=0.0,
-                            value=float(i + j + 1),
-                            key=f"costo_asig_{i}_{j}",
-                        )
+                with cols[j]:
+                    valor = st.number_input(
+                        f"P{i+1} - T{j+1}",
+                        min_value=0.0,
+                        value=float(i + j + 1),
+                        key=f"asig_{n}_{i}_{j}",
                     )
+                    fila.append(valor)
+
             costos.append(fila)
 
         if st.button("Resolver asignación"):
-            filas, columnas = linear_sum_assignment(np.array(costos))
-            total = sum(costos[i][j] for i, j in zip(filas, columnas))
+            filas, columnas = linear_sum_assignment(
+                np.array(costos)
+            )
+
+            total = sum(
+                costos[i][j]
+                for i, j in zip(filas, columnas)
+            )
+
             st.success(f"Costo mínimo total: {total:.2f}")
+
             for i, j in zip(filas, columnas):
                 st.write(
                     f"Persona {i+1} → Tarea {j+1}: "
-                    f"costo = {costos[i][j]:.2f}"
+                    f"costo {costos[i][j]:.2f}"
+                )
+
+    else:
+        st.info(
+            "Para resolver un problema de transporte se necesitan "
+            "los costos unitarios, la oferta de cada origen y la "
+            "demanda de cada destino. Comprueba primero que la oferta "
+            "total sea igual a la demanda total, o balancea el modelo."
+        )
+
+        origenes = st.selectbox("Número de orígenes", [2, 3, 4])
+        destinos = st.selectbox("Número de destinos", [2, 3, 4])
+
+        st.write("Matriz de costos unitarios")
+
+        matriz = []
+
+        for i in range(origenes):
+            cols = st.columns(destinos)
+            fila = []
+
+            for j in range(destinos):
+                with cols[j]:
+                    valor = st.number_input(
+                        f"Costo O{i+1}-D{j+1}",
+                        min_value=0.0,
+                        value=float(i + j + 1),
+                        key=f"trans_c_{origenes}_{destinos}_{i}_{j}",
+                    )
+                    fila.append(valor)
+
+            matriz.append(fila)
+
+        st.write("Oferta por origen")
+
+        oferta = [
+            st.number_input(
+                f"Oferta origen {i+1}",
+                min_value=0.0,
+                value=10.0,
+                key=f"oferta_{origenes}_{i}",
+            )
+            for i in range(origenes)
+        ]
+
+        st.write("Demanda por destino")
+
+        demanda = [
+            st.number_input(
+                f"Demanda destino {j+1}",
+                min_value=0.0,
+                value=10.0,
+                key=f"demanda_{destinos}_{j}",
+            )
+            for j in range(destinos)
+        ]
+
+        if st.button("Resolver transporte"):
+            if not np.isclose(sum(oferta), sum(demanda)):
+                st.error(
+                    "El modelo no está balanceado. La oferta total "
+                    "debe ser igual a la demanda total para este "
+                    "solucionador."
+                )
+                return
+
+            c = np.array(matriz, dtype=float).flatten()
+
+            A_eq = []
+            b_eq = []
+
+            for i in range(origenes):
+                fila = np.zeros((origenes, destinos))
+                fila[i, :] = 1
+                A_eq.append(fila.flatten())
+                b_eq.append(oferta[i])
+
+            for j in range(destinos):
+                fila = np.zeros((origenes, destinos))
+                fila[:, j] = 1
+                A_eq.append(fila.flatten())
+                b_eq.append(demanda[j])
+
+            resultado = linprog(
+                c,
+                A_eq=np.array(A_eq),
+                b_eq=np.array(b_eq),
+                bounds=(0, None),
+                method="highs",
+            )
+
+            if resultado.success:
+                plan = resultado.x.reshape(origenes, destinos)
+
+                st.success(
+                    f"Costo mínimo total: {resultado.fun:.2f}"
+                )
+                st.dataframe(
+                    plan,
+                    use_container_width=True,
+                )
+            else:
+                st.error(
+                    "No se pudo resolver el modelo: "
+                    + resultado.message
                 )
 
 
+# =========================================================
+# INVENTARIOS
+# =========================================================
+
 def inventarios():
     st.header("📦 Inventarios")
+
     tipo = st.radio(
-        "Cálculo",
-        ["Cantidad económica de pedido (EOQ)", "Punto de reorden"],
+        "Selecciona un cálculo",
+        [
+            "Cantidad económica de pedido (EOQ)",
+            "Punto de reorden",
+        ],
         horizontal=True,
     )
 
     if tipo == "Cantidad económica de pedido (EOQ)":
-        st.write("Modelo básico con demanda constante y reposición instantánea.")
-        D = st.number_input("Demanda anual (unidades)", min_value=0.01, value=1200.0)
-        S = st.number_input("Costo por pedido", min_value=0.0, value=25.0)
+        st.write(
+            "Modelo básico con demanda constante y reposición instantánea."
+        )
+
+        D = st.number_input(
+            "Demanda anual (unidades)",
+            min_value=0.01,
+            value=1200.0,
+        )
+
+        S = st.number_input(
+            "Costo por pedido",
+            min_value=0.0,
+            value=25.0,
+        )
+
         H = st.number_input(
             "Costo de mantenimiento por unidad al año",
             min_value=0.01,
@@ -463,98 +780,200 @@ def inventarios():
 
         if st.button("Calcular EOQ"):
             q = np.sqrt((2 * D * S) / H)
+
             st.latex(r"Q^*=\sqrt{\frac{2DS}{H}}")
-            st.latex(rf"Q^*=\sqrt{{\frac{{2({D:g})({S:g})}}{{{H:g}}}}}={q:.4f}")
-            st.metric("Cantidad económica de pedido", f"{q:.2f} unidades")
-            st.write(f"Pedidos aproximados por año: {D/q:.2f}")
-            costo = (D/q)*S + (q/2)*H
-            st.write(f"Costo anual de ordenar y mantener: {costo:.2f}")
+            st.metric(
+                "Cantidad económica de pedido",
+                f"{q:.2f} unidades",
+            )
+
+            st.write(
+                f"Pedidos aproximados al año: {D / q:.2f}"
+            )
+
+            costo = (D / q) * S + (q / 2) * H
+
+            st.write(
+                f"Costo anual de ordenar y mantener: {costo:.2f}"
+            )
 
     else:
-        demanda = st.number_input("Demanda diaria", min_value=0.0, value=20.0)
-        plazo = st.number_input("Tiempo de entrega en días", min_value=0.0, value=5.0)
-        seguridad = st.number_input("Stock de seguridad", min_value=0.0, value=0.0)
+        demanda = st.number_input(
+            "Demanda diaria",
+            min_value=0.0,
+            value=20.0,
+        )
+
+        plazo = st.number_input(
+            "Tiempo de entrega en días",
+            min_value=0.0,
+            value=5.0,
+        )
+
+        seguridad = st.number_input(
+            "Stock de seguridad",
+            min_value=0.0,
+            value=0.0,
+        )
 
         if st.button("Calcular punto de reorden"):
-            pr = demanda * plazo + seguridad
-            st.latex(r"PR=dL+SS")
-            st.latex(
-                rf"PR=({demanda:g})({plazo:g})+{seguridad:g}={pr:.2f}"
-            )
-            st.metric("Punto de reorden", f"{pr:.2f} unidades")
+            punto = demanda * plazo + seguridad
 
+            st.latex(r"PR=dL+SS")
+
+            st.metric(
+                "Punto de reorden",
+                f"{punto:.2f} unidades",
+            )
+
+
+# =========================================================
+# EJERCICIOS Y PRÁCTICA
+# =========================================================
 
 def ejercicios():
     st.header("📝 Ejercicios y práctica")
 
     ejemplos = [
-        ("1. Maximización básica", "Maximiza Z=40x+30y; 2x+y≤100; x+2y≤80; x,y≥0."),
-        ("2. Maximización de utilidad", "Maximiza Z=5x+4y; x+y≤20; 2x+y≤30; x,y≥0."),
-        ("3. Minimización", "Minimiza Z=3x+2y; x+y≥10; x+2y≥12; x,y≥0."),
-        ("4. Capacidad de producción", "Maximiza Z=8x+6y; 2x+y≤16; x+2y≤14; x,y≥0."),
-        ("5. Planificación", "Maximiza Z=7x+9y; x+y≤12; 2x+y≤16; x,y≥0."),
-        ("6. Presupuesto", "Maximiza Z=10x+5y; 2x+y≤18; x+3y≤24; x,y≥0."),
-        ("7. Mezcla de productos", "Maximiza Z=6x+8y; x+2y≤16; 3x+2y≤24; x,y≥0."),
-        ("8. Dieta simplificada", "Minimiza Z=4x+5y; x+y≥8; 2x+y≥10; x,y≥0."),
-        ("9. Publicidad", "Maximiza Z=3x+5y; x+y≤15; x+3y≤30; x,y≥0."),
-        ("10. Distribución de horas", "Maximiza Z=12x+10y; 2x+y≤20; x+2y≤18; x,y≥0."),
+        (
+            "1. Maximización básica",
+            "Maximiza Z = 40x + 30y; "
+            "2x + y ≤ 100; x + 2y ≤ 80; x,y ≥ 0.",
+        ),
+        (
+            "2. Maximización de utilidad",
+            "Maximiza Z = 5x + 4y; "
+            "x + y ≤ 20; 2x + y ≤ 30; x,y ≥ 0.",
+        ),
+        (
+            "3. Minimización",
+            "Minimiza Z = 3x + 2y; "
+            "x + y ≥ 10; x + 2y ≥ 12; x,y ≥ 0.",
+        ),
+        (
+            "4. Capacidad de producción",
+            "Maximiza Z = 8x + 6y; "
+            "2x + y ≤ 16; x + 2y ≤ 14; x,y ≥ 0.",
+        ),
+        (
+            "5. Planificación",
+            "Maximiza Z = 7x + 9y; "
+            "x + y ≤ 12; 2x + y ≤ 16; x,y ≥ 0.",
+        ),
+        (
+            "6. Presupuesto",
+            "Maximiza Z = 10x + 5y; "
+            "2x + y ≤ 18; x + 3y ≤ 24; x,y ≥ 0.",
+        ),
+        (
+            "7. Mezcla de productos",
+            "Maximiza Z = 6x + 8y; "
+            "x + 2y ≤ 16; 3x + 2y ≤ 24; x,y ≥ 0.",
+        ),
+        (
+            "8. Dieta simplificada",
+            "Minimiza Z = 4x + 5y; "
+            "x + y ≥ 8; 2x + y ≥ 10; x,y ≥ 0.",
+        ),
+        (
+            "9. Publicidad",
+            "Maximiza Z = 3x + 5y; "
+            "x + y ≤ 15; x + 3y ≤ 30; x,y ≥ 0.",
+        ),
+        (
+            "10. Distribución de horas",
+            "Maximiza Z = 12x + 10y; "
+            "2x + y ≤ 20; x + 2y ≤ 18; x,y ≥ 0.",
+        ),
     ]
 
-    elegido = st.selectbox("Selecciona un ejercicio", [e[0] for e in ejemplos])
-    st.info(dict(ejemplos)[elegido])
+    seleccionado = st.selectbox(
+        "Selecciona un ejercicio",
+        [e[0] for e in ejemplos],
+    )
+
+    st.info(dict(ejemplos)[seleccionado])
 
     st.caption(
-        "Estos diez enunciados son ejemplos iniciales. "
-        "Ingresa sus coeficientes en Programación lineal o Método gráfico para resolverlos."
+        "Puedes utilizar estos enunciados para practicar "
+        "la formulación de modelos."
     )
 
     st.divider()
-    st.subheader("Práctica con retroalimentación")
-    if "practica" not in st.session_state:
-        st.session_state.practica = (
+    st.subheader("Práctica rápida")
+
+    if "practica_loure" not in st.session_state:
+        st.session_state.practica_loure = (
             random.randint(2, 9),
             random.randint(2, 9),
             random.randint(1, 5),
             random.randint(1, 5),
         )
 
-    if st.button("Generar otra práctica"):
-        st.session_state.practica = (
+    if st.button("Generar otro ejercicio"):
+        st.session_state.practica_loure = (
             random.randint(2, 9),
             random.randint(2, 9),
             random.randint(1, 5),
             random.randint(1, 5),
         )
 
-    a, b, x, y = st.session_state.practica
-    st.write(f"Si Z = {a}x + {b}y, calcula Z cuando x = {x} e y = {y}.")
-    respuesta = st.number_input("Tu respuesta", value=0.0, key="respuesta_practica")
+    a, b, x, y = st.session_state.practica_loure
+
+    st.write(
+        f"Si Z = {a}x + {b}y, calcula Z cuando x = {x} e y = {y}."
+    )
+
+    respuesta = st.number_input(
+        "Tu respuesta",
+        value=0.0,
+        key="respuesta_loure",
+    )
 
     if st.button("Comprobar respuesta"):
-        correcta = a*x + b*y
+        correcta = a * x + b * y
+
         if abs(respuesta - correcta) < 1e-7:
-            st.success("¡Correcto! Sustituiste los valores correctamente.")
+            st.success("¡Correcto! 💙")
         else:
-            st.error(f"Revisa la sustitución: Z = {a}({x}) + {b}({y}).")
-            st.write(f"La respuesta correcta es {correcta}.")
+            st.error(
+                f"Revisa la sustitución: Z = {a}({x}) + {b}({y})."
+            )
+            st.write(f"El resultado correcto es {correcta}.")
 
 
-if modulo == "Inicio":
-    st.header("¡Bienvenido/a!")
+# =========================================================
+# MOSTRAR EL MÓDULO SELECCIONADO
+# =========================================================
+
+if modulo == "Chat con LOURE IA":
+    chat_loure_ia()
+
+elif modulo == "Inicio":
+    st.header("¡Bienvenido/a a LOURE IA! 💙")
+
     st.write(
-        "Selecciona un módulo para modelar, resolver y practicar "
-        "problemas de Investigación de Operaciones."
+        "Selecciona un módulo del menú lateral para comenzar "
+        "a trabajar."
     )
-    st.markdown("""
-    - 🧩 Modelación matemática
-    - 📈 Programación lineal
-    - 📉 Método gráfico
-    - 📋 Método simplex
-    - 🚚 Transporte y asignación
-    - 📦 Inventarios
-    - 📝 Ejercicios y práctica
-    """)
-    st.info("Completa los nombres de los integrantes y la sección en el panel lateral.")
+
+    st.markdown(
+        """
+        - 💬 Chat inteligente
+        - 🧩 Modelación matemática
+        - 📈 Programación lineal
+        - 📉 Método gráfico
+        - 📋 Método simplex
+        - 🚚 Transporte y asignación
+        - 📦 Inventarios
+        - 📝 Ejercicios y práctica
+        """
+    )
+
+    st.info(
+        "Completa los nombres de los integrantes y la sección "
+        "en el menú lateral si necesitas esa información."
+    )
 
 elif modulo == "Modelación matemática":
     modelacion()
@@ -564,14 +983,17 @@ elif modulo == "Programación lineal":
 
 elif modulo == "Método gráfico":
     st.header("📉 Método gráfico")
-    st.write("Modelo de dos variables con representación de restricciones y óptimo.")
+    st.write(
+        "Resuelve un modelo de dos variables y visualiza "
+        "las restricciones y el punto óptimo."
+    )
     modulo_lineal(grafica=True)
 
 elif modulo == "Método simplex":
     st.header("📋 Método simplex")
     st.write(
-        "El óptimo se calcula mediante SciPy/HiGHS. "
-        "Las iteraciones reportadas no equivalen a mostrar cada tabla manual de pivotes."
+        "La solución se calcula con SciPy/HiGHS. "
+        "Este módulo no presenta tablas manuales de cada pivote."
     )
     modulo_lineal(simplex=True)
 
@@ -584,6 +1006,15 @@ elif modulo == "Inventarios":
 elif modulo == "Ejercicios y práctica":
     ejercicios()
 
-st.divider()
-st.caption("OptiMath AI · Proyecto académico. Verifica que el modelo represente correctamente el enunciado.")
 
+# =========================================================
+# PIE DE PÁGINA
+# =========================================================
+
+st.divider()
+
+st.caption(
+    "💙 LOURE IA · Proyecto académico de Investigación de Operaciones. "
+    "Comprueba siempre que el modelo represente correctamente "
+    "el enunciado del problema."
+)
