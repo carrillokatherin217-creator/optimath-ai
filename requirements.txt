@@ -3,4 +3,5 @@ streamlit
 numpy
 matplotlib
 scipy
-openai
+google-genai
+
