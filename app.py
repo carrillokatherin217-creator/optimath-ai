@@ -200,7 +200,7 @@ def chat_loure_ia():
                     )
 
                 resultado = cliente.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=historial,
                     config=types.GenerateContentConfig(
                         system_instruction=instrucciones,
