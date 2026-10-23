@@ -121,22 +121,20 @@ def chat_loure_ia():
         {"role": "user", "content": pregunta}
     )
 
-    with st.chat_message("user"):
+       with st.chat_message("user"):
         st.markdown(pregunta)
 
-    
-clave = os.getenv("GEMINI_API_KEY", "")
+    clave = os.getenv("GEMINI_API_KEY", "")
 
-try:
-    clave = clave or st.secrets.get("GEMINI_API_KEY", "")
-except Exception:
-    pass
-
+    try:
+        clave = clave or st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        pass
 
     if not clave:
         respuesta = (
             "El chat todavía no está conectado a la API. 💙\n\n"
-            "Configura `OPENAI_API_KEY` en los Secrets de Streamlit Cloud. "
+            "Configura `GEMINI_API_KEY` en los Secrets de Streamlit Cloud. "
             "No publiques tu clave en GitHub ni la escribas directamente "
             "en este archivo."
         )
@@ -147,6 +145,7 @@ except Exception:
             {"role": "assistant", "content": respuesta}
         )
         return
+
 
     instrucciones = """
 Eres LOURE IA, un asistente educativo en español especializado en
