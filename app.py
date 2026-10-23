@@ -6,7 +6,8 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linprog, linear_sum_assignment
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 
 # =========================================================
