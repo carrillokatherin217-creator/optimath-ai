@@ -76,6 +76,7 @@ with st.sidebar:
 # CHAT INTELIGENTE
 # =========================================================
 
+
 def chat_loure_ia():
     st.header("💬 Conversa con LOURE IA")
 
@@ -102,7 +103,8 @@ def chat_loure_ia():
             {
                 "role": "assistant",
                 "content": (
-                    "¡Empecemos de nuevo! 💙 ¿Qué necesitas aprender hoy?"
+                    "¡Empecemos de nuevo! 💙 "
+                    "¿Qué necesitas aprender hoy?"
                 ),
             }
         ]
@@ -121,7 +123,7 @@ def chat_loure_ia():
         {"role": "user", "content": pregunta}
     )
 
-       with st.chat_message("user"):
+    with st.chat_message("user"):
         st.markdown(pregunta)
 
     clave = os.getenv("GEMINI_API_KEY", "")
@@ -134,10 +136,9 @@ def chat_loure_ia():
     if not clave:
         respuesta = (
             "El chat todavía no está conectado a la API. 💙\n\n"
-            "Configura `GEMINI_API_KEY` en los Secrets de Streamlit Cloud. "
-            "No publiques tu clave en GitHub ni la escribas directamente "
-            "en este archivo."
+            "Configura GEMINI_API_KEY en los Secrets de Streamlit Cloud."
         )
+
         with st.chat_message("assistant"):
             st.warning(respuesta)
 
@@ -145,6 +146,59 @@ def chat_loure_ia():
             {"role": "assistant", "content": respuesta}
         )
         return
+
+    try:
+        with st.chat_message("assistant"):
+            with st.spinner("LOURE IA está pensando... 💭"):
+                cliente = genai.Client(api_key=clave)
+
+                historial = []
+
+                for mensaje in st.session_state.loure_messages[-20:]:
+                    rol = (
+                        "model"
+                        if mensaje["role"] == "assistant"
+                        else "user"
+                    )
+
+                    historial.append(
+                        types.Content(
+                            role=rol,
+                            parts=[
+                                types.Part.from_text(
+                                    text=mensaje["content"]
+                                )
+                            ],
+                        )
+                    )
+
+                resultado = cliente.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=historial,
+                    config=types.GenerateContentConfig(
+                        system_instruction=instrucciones,
+                        temperature=0.4,
+                    ),
+                )
+
+                respuesta = (
+                    resultado.text
+                    or "No pude generar una respuesta. Inténtalo de nuevo."
+                )
+
+                st.markdown(respuesta)
+
+                st.session_state.loure_messages.append(
+                    {"role": "assistant", "content": respuesta}
+                )
+
+    except Exception as e:
+        st.error(
+            "Ocurrió un error al conectar con Gemini. "
+            "Revisa la configuración de la API. "
+            f"Detalle: {e}"
+        )
+
 
 
     instrucciones = """
