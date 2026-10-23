@@ -124,12 +124,14 @@ def chat_loure_ia():
     with st.chat_message("user"):
         st.markdown(pregunta)
 
-    clave = os.getenv("OPENAI_API_KEY", "")
+    
+clave = os.getenv("GEMINI_API_KEY", "")
 
-    try:
-        clave = clave or st.secrets.get("OPENAI_API_KEY", "")
-    except Exception:
-        pass
+try:
+    clave = clave or st.secrets.get("GEMINI_API_KEY", "")
+except Exception:
+    pass
+
 
     if not clave:
         respuesta = (
@@ -179,35 +181,38 @@ Tu comportamiento:
         st.session_state.loure_messages[-20:]
     )
 
-    try:
-        with st.chat_message("assistant"):
-            with st.spinner("LOURE IA está pensando... 💭"):
-                cliente = OpenAI(api_key=clave)
+   
+try:
+    with st.chat_message("assistant"):
+        with st.spinner("LOURE IA está pensando... 💭"):
+            cliente = genai.Client(api_key=clave)
 
-                resultado = cliente.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=mensajes_api,
-                    temperature=0.4,
+            historial = []
+            for mensaje in st.session_state.loure_messages[-20:]:
+                rol = "model" if mensaje["role"] == "assistant" else "user"
+                historial.append(
+                    types.Content(
+                        role=rol,
+                        parts=[types.Part.from_text(text=mensaje["content"])]
+                    )
                 )
 
-                respuesta = (
-                    resultado.choices[0].message.content
-                    or "No pude generar una respuesta. Inténtalo de nuevo."
+            resultado = cliente.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=historial,
+                config=types.GenerateContentConfig(
+                    system_instruction=instrucciones,
+                    temperature=0.4
                 )
+            )
 
-                st.markdown(respuesta)
+            respuesta = resultado.text or "No pude generar una respuesta. Inténtalo de nuevo."
 
-        st.session_state.loure_messages.append(
-            {"role": "assistant", "content": respuesta}
-        )
+            st.markdown(respuesta)
 
-    except Exception as error:
-        st.error(
-            "No pude conectar con la inteligencia artificial. "
-            "Verifica los Secrets de Streamlit Cloud, la conexión "
-            "y que tu cuenta de API tenga acceso disponible."
-        )
-        st.caption(f"Detalle técnico: {error}")
+            st.session_state.loure_messages.append(
+                {"role": "assistant", "content": respuesta}
+            )
 
 
 # =========================================================
