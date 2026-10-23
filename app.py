@@ -214,6 +214,8 @@ try:
                 {"role": "assistant", "content": respuesta}
             )
 
+except Exception as e:
+    st.error(f"Error al conectar con Gemini: {e}")
 
 # =========================================================
 # SOLUCIONADOR DE PROGRAMACIÓN LINEAL
