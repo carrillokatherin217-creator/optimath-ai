@@ -53,6 +53,7 @@ with st.sidebar:
     )
 
    
+
 # Información académica fija
 st.sidebar.markdown("---")
 st.sidebar.subheader("Información académica")
@@ -72,7 +73,6 @@ st.sidebar.write("Sexto ciclo")
 st.sidebar.markdown("**Sección**")
 st.sidebar.write("A")
 
-    st.divider()
     st.caption("LOURE IA · Aprende a tu ritmo 💙")
 
 
