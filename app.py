@@ -60,10 +60,10 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Información académica")
 
 st.sidebar.markdown("**Integrante 1**")
-st.sidebar.write("Karla Rebeca Ortiz Pineda")
+st.sidebar.write("Karla Rebeca Ortíz Pineda")
 
 st.sidebar.markdown("**Integrante 2**")
-st.sidebar.write("Katherin Lourdes Carrillo Garcia")
+st.sidebar.write("Katherin Lourdes Carrillo García")
 
 st.sidebar.markdown("**Integrante 3**")
 st.sidebar.write("Melany Alejadra Sanchez Díaz")
