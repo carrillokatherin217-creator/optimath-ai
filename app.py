@@ -1,160 +1,96 @@
-            min_value=0.0,
-            value=None,
-        )
 
-        plazo = st.number_input(
-            "Tiempo de entrega en días",
-            min_value=0.0,
-            value=None,
-        )
+import os
+import random
 
-        seguridad = st.number_input(
-            "Stock de seguridad",
-            min_value=0.0,
-            value=None,
-        )
-
-        if st.button("Calcular punto de reorden"):
-            faltantes = []
-            if demanda is None:
-                faltantes.append("demanda diaria")
-            if plazo is None:
-                faltantes.append("tiempo de entrega")
-            if seguridad is None:
-                faltantes.append("stock de seguridad")
-            if faltantes:
-                st.error("Faltan estos datos: " + ", ".join(faltantes) + ".")
-                return
-            punto = demanda * plazo + seguridad
-
-            st.latex(r"PR=dL+SS")
-
-            st.metric(
-                "Punto de reorden",
-                f"{punto:.2f} unidades",
-            )
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import linprog, linear_sum_assignment
+from google import genai
+from google.genai import types
 
 
 # =========================================================
-# EJERCICIOS Y PRÁCTICA
+# CONFIGURACIÓN GENERAL
 # =========================================================
 
-def ejercicios():
-    st.header("📝 Ejercicios y práctica")
+st.set_page_config(
+    page_title="LOUREANY",
+    page_icon="💙",
+    layout="wide",
+)
 
-    ejemplos = [
-        (
-            "1. Maximización básica",
-            "Maximiza Z = 40x + 30y; "
-            "2x + y ≤ 100; x + 2y ≤ 80; x,y ≥ 0.",
-        ),
-        (
-            "2. Maximización de utilidad",
-            "Maximiza Z = 5x + 4y; "
-            "x + y ≤ 20; 2x + y ≤ 30; x,y ≥ 0.",
-        ),
-        (
-            "3. Minimización",
-            "Minimiza Z = 3x + 2y; "
-            "x + y ≥ 10; x + 2y ≥ 12; x,y ≥ 0.",
-        ),
-        (
-            "4. Capacidad de producción",
-            "Maximiza Z = 8x + 6y; "
-            "2x + y ≤ 16; x + 2y ≤ 14; x,y ≥ 0.",
-        ),
-        (
-            "5. Planificación",
-            "Maximiza Z = 7x + 9y; "
-            "x + y ≤ 12; 2x + y ≤ 16; x,y ≥ 0.",
-        ),
-        (
-            "6. Presupuesto",
-            "Maximiza Z = 10x + 5y; "
-            "2x + y ≤ 18; x + 3y ≤ 24; x,y ≥ 0.",
-        ),
-        (
-            "7. Mezcla de productos",
-            "Maximiza Z = 6x + 8y; "
-            "x + 2y ≤ 16; 3x + 2y ≤ 24; x,y ≥ 0.",
-        ),
-        (
-            "8. Dieta simplificada",
-            "Minimiza Z = 4x + 5y; "
-            "x + y ≥ 8; 2x + y ≥ 10; x,y ≥ 0.",
-        ),
-        (
-            "9. Publicidad",
-            "Maximiza Z = 3x + 5y; "
-            "x + y ≤ 15; x + 3y ≤ 30; x,y ≥ 0.",
-        ),
-        (
-            "10. Distribución de horas",
-            "Maximiza Z = 12x + 10y; "
-            "2x + y ≤ 20; x + 2y ≤ 18; x,y ≥ 0.",
-        ),
-    ]
-
-    seleccionado = st.selectbox(
-        "Selecciona un ejercicio",
-        [e[0] for e in ejemplos],
-    )
-
-    st.info(dict(ejemplos)[seleccionado])
-
-    st.caption(
-        "Puedes utilizar estos enunciados para practicar "
-        "la formulación de modelos."
-    )
-
-    st.divider()
-    st.subheader("Práctica rápida")
-
-    if "practica_loureany" not in st.session_state:
-        st.session_state.practica_loureany = (
-            random.randint(2, 9),
-            random.randint(2, 9),
-            random.randint(1, 5),
-            random.randint(1, 5),
-        )
-
-    if st.button("Generar otro ejercicio"):
-        st.session_state.practica_loureany = (
-            random.randint(2, 9),
-            random.randint(2, 9),
-            random.randint(1, 5),
-            random.randint(1, 5),
-        )
-
-    a, b, x, y = st.session_state.practica_loureany
-
-    st.write(
-        f"Si Z = {a}x + {b}y, calcula Z cuando x = {x} e y = {y}."
-    )
-
-    respuesta = st.number_input(
-        "Tu respuesta",
-        value=0.0,
-        key="respuesta_loure",
-    )
-
-    if st.button("Comprobar respuesta"):
-        correcta = a * x + b * y
-
-        if abs(respuesta - correcta) < 1e-7:
-            st.success("¡Correcto! 💙")
-        else:
-            st.error(
-                f"Revisa la sustitución: Z = {a}({x}) + {b}({y})."
-            )
-            st.write(f"El resultado correcto es {correcta}.")
+st.title("💙 LOUREANY")
+st.subheader("Tu asistente virtual de Investigación de Operaciones")
+st.write(
+    "Aprende, modela y resuelve problemas paso a paso "
+    "con ayuda de la inteligencia artificial."
+)
+st.caption("Proyecto académico · Investigación de Operaciones")
 
 
 # =========================================================
-# MOSTRAR EL MÓDULO SELECCIONADO
+# MENÚ LATERAL
 # =========================================================
 
-if modulo == "Chat con LOUREANY":
-    chat_loureany()
+with st.sidebar:
+    st.header("💙 LOUREANY")
+    st.write("¿En qué podemos trabajar hoy?")
 
-elif modulo == "Inicio":
+    modulo = st.selectbox(
+        "Selecciona un módulo",
+        [
+            "Chat con LOUREANY",
+            "Inicio",
+            "Modelación matemática",
+            "Programación lineal",
+            "Método gráfico",
+            "Método simplex",
+            "Transporte y asignación",
+            "Inventarios",
+            "Ejercicios y práctica",
+        ],
+    )
+
+   
+
+# Información académica fija
+st.sidebar.markdown("---")
+st.sidebar.subheader("Información académica")
+
+st.sidebar.markdown("**Integrante 1**")
+st.sidebar.write("Karla Rebeca Ortiz Pineda")
+
+st.sidebar.markdown("**Integrante 2**")
+st.sidebar.write("Katherin Lourdes Carrillo Garcia")
+
+st.sidebar.markdown("**Integrante 3**")
+st.sidebar.write("Melany Alejadra Sanchez Díaz")
+
+st.sidebar.markdown("**Carrera**")
+st.sidebar.write("Ingeniería en Sistemas")
+
+st.sidebar.markdown("**Grado**")
+st.sidebar.write("Sexto ciclo")
+
+st.sidebar.markdown("**Sección**")
+st.sidebar.write("A")
+st.caption("LOUREANY · Aprende a tu ritmo 💙")
+
+
+# =========================================================
+# INSTRUCCIONES DEL CHAT
+# =========================================================
+
+instrucciones = """
+Eres LOUREANY, un asistente educativo en español especializado en
+Investigación de Operaciones.
+
+Ayudas con:
+- Modelación matemática.
+- Programación lineal.
+- Método gráfico.
+- Método simplex.
+- Problemas de transporte y asignación.
+- Inventarios y cantidad económica de pedido.
+- Ejercicios y práctica académica.
