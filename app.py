@@ -5,6 +5,7 @@ import random
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.optimize import linprog, linear_sum_assignment
 from google import genai
 from google.genai import types
@@ -34,7 +35,7 @@ st.caption("Proyecto académico · Investigación de Operaciones")
 # =========================================================
 
 with st.sidebar:
-    st.header("💙 LOUREANY")
+    st.header("LOUREANY")
     st.write("¿En qué podemos trabajar hoy?")
 
     modulo = st.selectbox(
@@ -138,7 +139,7 @@ def chat_loureany():
         st.session_state.loureany_messages = [
             {
                 "role": "assistant",
-                "content": "¡Empecemos de nuevo! 💙 ¿Qué necesitas aprender hoy?",
+                "content": "¡Empecemos de nuevo!  ¿Qué necesitas aprender hoy?",
             }
         ]
         st.rerun()
@@ -203,7 +204,7 @@ def chat_loureany():
                     yield texto
 
         with st.chat_message("assistant"):
-            with st.spinner("LOUREANY está conectando con Gemini... 💙"):
+            with st.spinner("LOUREANY está pensando... "):
                 respuesta = st.write_stream(fragmentos_de_respuesta())
 
         if not isinstance(respuesta, str):
@@ -395,7 +396,23 @@ def modulo_lineal(grafica=False, simplex=False):
             st.subheader("2. Función objetivo")
             st.latex(rf"Z = {cx:g}x + {cy:g}y")
 
-            st.subheader("3. Restricciones")
+            st.subheader("3. Tabla de restricciones")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Restricción": f"R{i}",
+                            "Coeficiente de x": a,
+                            "Coeficiente de y": b,
+                            "Signo": signo,
+                            "Límite": limite,
+                        }
+                        for i, (a, b, signo, limite) in enumerate(restricciones, 1)
+                    ]
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
 
             for i, (a, b, signo, limite) in enumerate(
                 restricciones, 1
@@ -441,13 +458,21 @@ def modulo_lineal(grafica=False, simplex=False):
             )
 
             if simplex:
-                st.subheader("Información del solucionador")
+                st.subheader("📋 Información del método simplex")
+                st.success("¡El solucionador encontró una solución óptima!")
                 st.write(
-                    "Se utiliza SciPy con el método HiGHS. "
-                    "Esto no muestra las tablas manuales de pivotes."
+                    "Se utilizó el optimizador HiGHS de SciPy "
+                    "para resolver el modelo de programación lineal."
                 )
-                st.write(resultado.message)
-                st.write(f"Iteraciones reportadas: {resultado.nit}")
+                st.metric(
+                    "Iteraciones reportadas por el solucionador",
+                    resultado.nit,
+                )
+                st.info(
+                    "Nota académica: esta solución se obtiene mediante "
+                    "un optimizador computacional. No se muestran las "
+                    "tablas manuales de cada iteración del método simplex."
+                )
 
             if grafica:
                 st.subheader("6. Gráfica de restricciones")
@@ -517,14 +542,14 @@ def modulo_lineal(grafica=False, simplex=False):
                     [y],
                     marker="*",
                     s=180,
-                    label="Óptimo",
+                    label="Punto óptimo",
                 )
 
                 ax.set_xlim(0, max_x)
                 ax.set_ylim(0, max_y)
-                ax.set_xlabel("x")
-                ax.set_ylabel("y")
-                ax.set_title("Restricciones y solución óptima")
+                ax.set_xlabel("Cantidad de x")
+                ax.set_ylabel("Cantidad de y")
+                ax.set_title("Gráfica de restricciones y solución óptima")
                 ax.grid(True)
                 ax.legend()
 
@@ -652,22 +677,36 @@ def transporte_y_asignacion():
                 st.error("Faltan estos datos: " + ", ".join(faltantes) + ".")
                 return
 
-            filas, columnas = linear_sum_assignment(
-                np.array(costos, dtype=float)
+            matriz_costos = np.array(costos, dtype=float)
+            st.subheader("Tabla de costos")
+            st.dataframe(
+                pd.DataFrame(
+                    matriz_costos,
+                    index=[f"Persona {i+1}" for i in range(n)],
+                    columns=[f"Tarea {j+1}" for j in range(n)],
+                ),
+                use_container_width=True,
             )
 
-            total = sum(
-                costos[i][j]
+            filas, columnas = linear_sum_assignment(matriz_costos)
+            total = sum(costos[i][j] for i, j in zip(filas, columnas))
+
+            asignaciones = [
+                {
+                    "Persona": f"Persona {i+1}",
+                    "Tarea asignada": f"Tarea {j+1}",
+                    "Costo": round(float(costos[i][j]), 2),
+                }
                 for i, j in zip(filas, columnas)
+            ]
+
+            st.subheader("Tabla de asignaciones óptimas")
+            st.dataframe(
+                pd.DataFrame(asignaciones),
+                hide_index=True,
+                use_container_width=True,
             )
-
             st.success(f"Costo mínimo total: {total:.2f}")
-
-            for i, j in zip(filas, columnas):
-                st.write(
-                    f"Persona {i+1} → Tarea {j+1}: "
-                    f"costo {costos[i][j]:.2f}"
-                )
 
     else:
         st.info(
@@ -699,6 +738,16 @@ def transporte_y_asignacion():
                     fila.append(valor)
 
             matriz.append(fila)
+
+        st.subheader("Tabla de costos unitarios")
+        st.dataframe(
+            pd.DataFrame(
+                matriz,
+                index=[f"Origen {i+1}" for i in range(origenes)],
+                columns=[f"Destino {j+1}" for j in range(destinos)],
+            ),
+            use_container_width=True,
+        )
 
         st.write("Oferta por origen")
 
@@ -779,10 +828,26 @@ def transporte_y_asignacion():
                 st.success(
                     f"Costo mínimo total: {resultado.fun:.2f}"
                 )
-                st.dataframe(
-                    plan,
-                    use_container_width=True,
+                st.subheader("Tabla de cantidades transportadas")
+                tabla_plan = pd.DataFrame(
+                    np.round(plan, 4),
+                    index=[f"Origen {i+1}" for i in range(origenes)],
+                    columns=[f"Destino {j+1}" for j in range(destinos)],
                 )
+                st.dataframe(tabla_plan, use_container_width=True)
+
+                st.subheader("Resumen de envíos")
+                envios = []
+                for i in range(origenes):
+                    for j in range(destinos):
+                        envios.append({
+                            "Origen": f"Origen {i+1}",
+                            "Destino": f"Destino {j+1}",
+                            "Costo unitario": float(matriz[i][j]),
+                            "Cantidad enviada": round(float(plan[i, j]), 4),
+                            "Costo del envío": round(float(plan[i, j] * matriz[i][j]), 4),
+                        })
+                st.dataframe(pd.DataFrame(envios), hide_index=True, use_container_width=True)
             else:
                 st.error(
                     "No se pudo resolver el modelo: "
@@ -863,6 +928,18 @@ def inventarios():
             st.write(
                 f"Costo anual de ordenar y mantener: {costo:.2f}"
             )
+            st.subheader("Resumen de datos y resultados")
+            st.dataframe(
+                pd.DataFrame([
+                    {"Concepto": "Demanda anual", "Valor": D, "Unidad": "unidades/año"},
+                    {"Concepto": "Costo por pedido", "Valor": S, "Unidad": "moneda/pedido"},
+                    {"Concepto": "Costo de mantenimiento", "Valor": H, "Unidad": "moneda/unidad/año"},
+                    {"Concepto": "Cantidad económica de pedido", "Valor": round(float(q), 4), "Unidad": "unidades"},
+                    {"Concepto": "Costo anual de ordenar y mantener", "Valor": round(float(costo), 4), "Unidad": "moneda/año"},
+                ]),
+                hide_index=True,
+                use_container_width=True,
+            )
 
     else:
         demanda = st.number_input(
@@ -901,6 +978,17 @@ def inventarios():
             st.metric(
                 "Punto de reorden",
                 f"{punto:.2f} unidades",
+            )
+            st.subheader("Resumen de datos y resultado")
+            st.dataframe(
+                pd.DataFrame([
+                    {"Concepto": "Demanda diaria", "Valor": demanda, "Unidad": "unidades/día"},
+                    {"Concepto": "Tiempo de entrega", "Valor": plazo, "Unidad": "días"},
+                    {"Concepto": "Stock de seguridad", "Valor": seguridad, "Unidad": "unidades"},
+                    {"Concepto": "Punto de reorden", "Valor": round(float(punto), 4), "Unidad": "unidades"},
+                ]),
+                hide_index=True,
+                use_container_width=True,
             )
 
 
@@ -1011,7 +1099,7 @@ def ejercicios():
         correcta = a * x + b * y
 
         if abs(respuesta - correcta) < 1e-7:
-            st.success("¡Correcto! 💙")
+            st.success("¡Correcto! ")
         else:
             st.error(
                 f"Revisa la sustitución: Z = {a}({x}) + {b}({y})."
@@ -1090,7 +1178,6 @@ elif modulo == "Ejercicios y práctica":
 st.divider()
 
 st.caption(
-    "💙 LOUREANY · Proyecto académico de Investigación de Operaciones. "
-    "Comprueba siempre que el modelo represente correctamente "
-    "el enunciado del problema."
+    "LOUREANY · Proyecto académico de Investigación de Operaciones. "
+      
 )
