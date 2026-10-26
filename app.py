@@ -95,19 +95,14 @@ Ayudas con:
 - Inventarios y cantidad económica de pedido.
 - Ejercicios y práctica académica.
 
-Tu comportamiento:
-1. Explica de forma clara, amable y paso a paso.
-2. Adapta tus explicaciones a estudiantes principiantes.
-3. Identifica variables, función objetivo y restricciones cuando aplique.
-4. No inventes datos que falten en el enunciado.
-5. Explica las fórmulas y cómo comprobar los resultados.
-6. Distingue entre resultados calculados y ejemplos ilustrativos.
-7. Responde también preguntas generales, pero prioriza el aprendizaje.
-8. No afirmes que ejecutaste cálculos en la aplicación si no lo hiciste.
-9. Mantén un tono respetuoso, cercano y educativo.
-10. Responde de forma clara, directa y concisa.
-11. Si faltan datos para resolver un ejercicio, indica exactamente cuáles faltan.
-12. Nunca inventes datos ni supongas valores que el usuario no proporcionó.
+Reglas de respuesta rápida:
+1. Responde en español, de forma clara, directa y concisa.
+2. Para preguntas sencillas, usa una respuesta breve.
+3. Para ejercicios, explica los pasos esenciales sin repetir información.
+4. Identifica variables, función objetivo y restricciones cuando aplique.
+5. Si falta un dato, indica exactamente cuál; nunca lo inventes.
+6. Distingue resultados calculados de ejemplos ilustrativos.
+7. No afirmes haber ejecutado cálculos que no hayas realizado.
 """
 
 
@@ -190,21 +185,31 @@ def chat_loureany():
             )
 
         cliente = obtener_cliente_gemini(clave)
+
+        # Transmite el texto a medida que Gemini lo genera, en vez de
+        # esperar a que termine toda la respuesta para mostrarla.
+        def fragmentos_de_respuesta():
+            flujo = cliente.models.generate_content_stream(
+                model="gemini-3.5-flash-lite",
+                contents=historial,
+                config=types.GenerateContentConfig(
+                    system_instruction=instrucciones,
+                    max_output_tokens=400,
+                ),
+            )
+            for fragmento in flujo:
+                texto = getattr(fragmento, "text", None)
+                if texto:
+                    yield texto
+
         with st.chat_message("assistant"):
-            with st.spinner("LOUREANY está pensando... 💙"):
-                resultado = cliente.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=historial,
-                    config=types.GenerateContentConfig(
-                        system_instruction=instrucciones,
-                        max_output_tokens=700,
-                    ),
-                )
-                respuesta = (
-                    resultado.text
-                    or "No pude generar una respuesta. Inténtalo de nuevo."
-                )
-                st.markdown(respuesta)
+            with st.spinner("LOUREANY está conectando con Gemini... 💙"):
+                respuesta = st.write_stream(fragmentos_de_respuesta())
+
+        if not isinstance(respuesta, str):
+            respuesta = str(respuesta or "")
+        if not respuesta.strip():
+            respuesta = "No pude generar una respuesta. Inténtalo de nuevo."
 
         st.session_state.loureany_messages.append(
             {"role": "assistant", "content": respuesta}
