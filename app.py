@@ -129,7 +129,7 @@ def chat_loureany():
             {
                 "role": "assistant",
                 "content": (
-                    "¡Holaaa! Soy LOUREANY. 💙\\n\\n"
+                    "¡Holaaa! Soy LOUREANY. 💙"
                     "Cuéntame tu ejercicio o qué necesitas aprender."
                 ),
             }
